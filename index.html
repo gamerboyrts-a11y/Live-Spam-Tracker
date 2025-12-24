@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Twitch Spam Tracker</title>
+    <style>
+        body { background: linear-gradient(to bottom, #9146ff, #331a3d); color: white; font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+        input, button { padding: 10px; font-size: 18px; margin: 10px; }
+        #status { font-size: 20px; margin: 20px; }
+        .top { font-size: 48px; margin: 30px; padding: 20px; border: 3px solid #9146ff; border-radius: 20px; background: rgba(0,0,0,0.5); min-height: 100px; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+        img { width: 80px; height: 80px; margin-right: 20px; }
+        #top1 { border-color: gold; }
+        #top2 { border-color: silver; }
+        #top3 { border-color: #cd7f32; }
+    </style>
+</head>
+<body>
+    <h1>Twitch Chat Spam Tracker (Top 3 Live)</h1>
+    <input id="channel" placeholder="Enter channel name (lowercase)" />
+    <button onclick="connect()">Connect</button>
+    <div id="status">Disconnected</div>
+    <div id="top1" class="top">Top 1: -</div>
+    <div id="top2" class="top">Top 2: -</div>
+    <div id="top3" class="top">Top 3: -</div>
+
+    <script>
+        let ws = null;
+        let spams = new Map(); // key -> {timestamps: [numbers]}
+        const TAU = 300000; // 5 minutes for decay
+        const MAX_TIMESTAMPS = 100;
+        const OLD_THRESHOLD = 3600000; // 1 hour
+
+        function addSpam(key) {
+            let item = spams.get(key) || {timestamps: []};
+            item.timestamps.push(Date.now());
+            // Prune old
+            item.timestamps = item.timestamps.filter(t => Date.now() - t < OLD_THRESHOLD);
+            // Keep recent
+            while (item.timestamps.length > MAX_TIMESTAMPS) {
+                item.timestamps.shift();
+            }
+            spams.set(key, item);
+        }
+
+        function getScore(key) {
+            const item = spams.get(key);
+            if (!item) return 0;
+            return item.timestamps.reduce((sum, t) => sum + Math.exp(-(Date.now() - t) / TAU), 0);
+        }
+
+        function updateDisplay() {
+            const items = Array.from(spams.keys())
+                .map(key => ({key: key.toLowerCase(), score: getScore(key)}))
+                .filter(item => item.score > 0)
+                .sort((a, b) => b.score - a.score)
+                .slice(0, 3);
+            const tops = ['top1', 'top2', 'top3'];
+            for (let i = 0; i < 3; i++) {
+                const el = document.getElementById(tops[i]);
+                if (i >= items.length || items[i].score === 0) {
+                    el.innerHTML = `Top ${i+1}: -`;
+                    continue;
+                }
+                const maxScore = items[0].score;
+                const perc = Math.round((items[i].score / maxScore) * 100);
+                let icon = items[i].key;
+                if (items[i].key === '1') icon = '<img src="1.png" alt="1" />';
+                else if (items[i].key === '2') icon = '<img src="2.png" alt="2" />';
+                else if (items[i].key === '3') icon = '<img src="3.png" alt="3" />';
+                el.innerHTML = `${icon} ${perc}%`;
+            }
+        }
+
+        function parseAndProcess(raw) {
+            if (raw.includes('PRIVMSG')) {
+                const msgIndex = raw.indexOf('PRIVMSG ');
+                const chanPart = raw.slice(msgIndex + 8);
+                const message = chanPart.split(' :')[1]?.trim();
+                if (message) {
+                    message.toLowerCase().split(/\s+/).forEach(word => {
+                        if ((/^[a-z]+$/.test(word) || /^[0-9]+$/.test(word)) && word.length > 0) {
+                            addSpam(word);
+                        }
+                    });
+                }
+            }
+        }
+
+        function connect() {
+            const channel = document.getElementById('channel').value.trim().toLowerCase();
+            if (!channel) {
+                alert('Enter channel name');
+                return;
+            }
+            if (ws) ws.close();
+            const nick = `justinfan${Math.floor(Math.random() * 90000) + 10000}`;
+            ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
+            document.getElementById('status').textContent = 'Connecting...';
+            ws.onopen = () => {
+                ws.send('PASS schmoo');
+                ws.send(`NICK ${nick}`);
+                ws.send(`JOIN #${channel}`);
+                document.getElementById('status').textContent = `Connected to #${channel}`;
+            };
+            ws.onmessage = (event) => {
+                const lines = event.data.split('\r\n');
+                for (const line of lines) {
+                    if (line.trim()) {
+                        if (line.startsWith('PING :tmi.twitch.tv')) {
+                            ws.send('PONG :tmi.twitch.tv');
+                        } else {
+                            parseAndProcess(line);
+                        }
+                    }
+                }
+                updateDisplay();
+            };
+            ws.onclose = () => {
+                document.getElementById('status').textContent = 'Disconnected (retry?)';
+                setTimeout(() => connect(), 5000); // Auto reconnect
+            };
+            ws.onerror = (e) => {
+                document.getElementById('status').textContent = 'Error - check channel name';
+                console.error(e);
+            };
+        }
+
+        setInterval(updateDisplay, 2000); // Update every 2s
+    </script>
+</body>
+</html>
