@@ -1,4 +1,4 @@
-# Ranks Twitch-Chat-Spam `Emote support for 7TV only`. 
+# Rank-Twitch-Chat-Spam `Emote support for 7TV only`. 
 A real-time, browser-based dashboard that tracks and ranks the most spammed words and 7TV emotes in any Twitch chat.
 
 ![alt text](https://github.com/gamerboyrts-a11y/Twitch-Chat-spam/blob/0e871365d3e201309adb4d01fefe2fca3be2aeb1/Web.png "Website")
