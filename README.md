@@ -1,4 +1,4 @@
-### Rank-Twitch-Chat-Spam
+### Live-Spam-Tracker
 
   The Ultimate Real-Time Chat Meter.  `Check chats mood with a glance.`  
   
