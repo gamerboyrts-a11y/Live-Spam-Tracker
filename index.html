@@ -3,30 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rank-Twitch-Chat-Spam</title>
+    <title>Twitch Spam Tracker (Custom Cards)</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { background: linear-gradient(to bottom, #18181b, #0e0e10); color: #efeff1; font-family: 'Inter', Helvetica, Arial, sans-serif; text-align: center; padding: 20px; overflow-x: hidden; min-height: 100vh; margin: 0; }
+        /* Base Style */
+        body { background: linear-gradient(to bottom, #18181b, #0e0e10); color: #efeff1; font-family: 'Inter', Helvetica, Arial, sans-serif; text-align: center; padding: 20px; overflow-x: hidden; min-height: 100vh; margin: 0; transition: background 0.3s; }
+        
+        /* OBS Mode */
+        body.obs-mode { background: transparent !important; overflow: hidden; }
+        body.obs-mode .controls, 
+        body.obs-mode h1, 
+        body.obs-mode .signature,
+        body.obs-mode #status-container,
+        body.obs-mode #chart-container,
+        body.obs-mode .help-section { display: none !important; } 
         
         /* Input Section */
-        .controls { background: #1f1f23; padding: 20px; border-radius: 10px; display: inline-block; box-shadow: 0 4px 6px rgba(0,0,0,0.3); margin-bottom: 20px; }
-        input { padding: 12px; font-size: 16px; border-radius: 6px; border: 1px solid #3a3a3d; background: #0e0e10; color: white; width: 200px; outline: none; }
-        input:focus { border-color: #9146ff; }
+        .controls { background: #1f1f23; padding: 20px; border-radius: 10px; display: inline-block; box-shadow: 0 4px 6px rgba(0,0,0,0.3); margin-bottom: 20px; max-width: 900px; }
+        input, textarea { padding: 12px; font-size: 14px; border-radius: 6px; border: 1px solid #3a3a3d; background: #0e0e10; color: white; outline: none; }
+        input:focus, textarea:focus { border-color: #9146ff; }
         button { padding: 12px 24px; font-size: 16px; margin-left: 10px; border-radius: 6px; border: none; background-color: #9146ff; color: white; cursor: pointer; font-weight: bold; transition: background 0.2s; }
         button:hover { background-color: #772ce8; }
 
-        /* Toggles & Timer */
-        .settings-row { margin-top: 15px; display: flex; align-items: center; justify-content: center; gap: 20px; flex-wrap: wrap; }
-        
-        .toggle-group { display: flex; align-items: center; gap: 8px; }
-        .switch { position: relative; display: inline-block; width: 50px; height: 24px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #3a3a3d; transition: .4s; border-radius: 24px; }
-        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: #9146ff; }
-        input:checked + .slider:before { transform: translateX(26px); }
-        .label-text { font-size: 14px; color: #adadb8; font-weight: 600; }
+        /* Help Section */
+        .help-section { max-width: 600px; margin: 0 auto 20px auto; text-align: left; background: rgba(255,255,255,0.05); border-radius: 8px; overflow: hidden; }
+        details { padding: 10px 15px; cursor: pointer; }
+        summary { font-weight: bold; color: #adadb8; outline: none; }
+        summary:hover { color: #fff; }
+        .help-content { padding: 10px; color: #cfcfd1; font-size: 14px; line-height: 1.6; border-top: 1px solid rgba(255,255,255,0.1); }
+        .highlight { color: #00e6cc; font-weight: bold; }
+        .step { margin-bottom: 8px; }
 
-        .timer-group input { width: 60px; padding: 8px; margin-left: 5px; text-align: center; }
+        /* Settings Rows */
+        .settings-container { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
+        .settings-row { display: flex; align-items: center; justify-content: center; gap: 20px; flex-wrap: wrap; }
+        
+        .toggle-group { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.05); padding: 5px 10px; border-radius: 8px; }
+        .switch { position: relative; display: inline-block; width: 40px; height: 20px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #3a3a3d; transition: .4s; border-radius: 20px; }
+        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #9146ff; }
+        input:checked + .slider:before { transform: translateX(20px); }
+        .label-text { font-size: 13px; color: #adadb8; font-weight: 600; }
+
+        .small-input { width: 60px; padding: 4px; margin-left: 5px; text-align: center; font-size: 13px; }
         
         /* Status Bar */
         #status-container { max-width: 600px; margin: 0 auto 30px; text-align: center; }
@@ -35,64 +56,139 @@
         #progress-bar { width: 0%; height: 100%; background: #00e6cc; transition: width 0.3s ease; box-shadow: 0 0 8px #00e6cc; }
 
         /* Cards */
-        .top-container { display: flex; justify-content: center; gap: 30px; flex-wrap: wrap; margin-top: 20px; }
+        .top-container { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin-top: 20px; }
         .top-card { 
-            width: 220px; height: 260px; padding: 20px; 
+            width: 200px; height: 240px; padding: 20px; 
             border-radius: 16px; 
             background: #1f1f23;
             display: flex; flex-direction: column; align-items: center; justify-content: space-between;
             position: relative;
-            border: 2px solid transparent;
-            transition: transform 0.2s;
+            border: 2px solid #3a3a3d; /* Default border for #4+ */
+            transition: transform 0.2s, box-shadow 0.2s;
         }
         .top-card:hover { transform: translateY(-5px); }
         
-        .rank-badge { position: absolute; top: -15px; background: #18181b; padding: 5px 15px; border-radius: 20px; border: 2px solid; font-weight: bold; font-size: 18px; }
+        /* HYPE MODE */
+        @keyframes pulse-gold {
+            0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.7); transform: scale(1); border-color: #ffd700; }
+            70% { box-shadow: 0 0 20px 10px rgba(255, 215, 0, 0); transform: scale(1.05); border-color: #ffd700; }
+            100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); transform: scale(1); border-color: #ffd700; }
+        }
+        .hype-mode { animation: pulse-gold 1s infinite; z-index: 10; }
+
+        .rank-badge { position: absolute; top: -15px; background: #18181b; padding: 5px 15px; border-radius: 20px; border: 2px solid; font-weight: bold; font-size: 18px; color: #adadb8; border-color: #3a3a3d; }
         
+        /* Special styles for Top 3 */
         #card1 { border-color: #eec22e; box-shadow: 0 0 20px rgba(238, 194, 46, 0.15); }
         #card1 .rank-badge { border-color: #eec22e; color: #eec22e; }
-        
+        #card1 .percent-bar-fill { background: #eec22e; }
+
         #card2 { border-color: #c0c0c0; box-shadow: 0 0 20px rgba(192, 192, 192, 0.15); }
         #card2 .rank-badge { border-color: #c0c0c0; color: #c0c0c0; }
-        
+        #card2 .percent-bar-fill { background: #c0c0c0; }
+
         #card3 { border-color: #cd7f32; box-shadow: 0 0 20px rgba(205, 127, 50, 0.15); }
         #card3 .rank-badge { border-color: #cd7f32; color: #cd7f32; }
+        #card3 .percent-bar-fill { background: #cd7f32; }
 
         .content-area { flex-grow: 1; display: flex; align-items: center; justify-content: center; width: 100%; overflow: hidden; }
-        .content-area img { height: 112px; max-width: 100%; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5)); }
-        .content-area span { font-size: 36px; font-weight: 800; word-break: break-word; line-height: 1.1; }
+        .content-area img { height: 90px; max-width: 100%; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5)); }
+        .content-area span { font-size: 32px; font-weight: 800; word-break: break-word; line-height: 1.1; }
         
         .percent-bar-bg { width: 100%; height: 8px; background: #3a3a3d; border-radius: 4px; overflow: hidden; margin-top: 15px; }
-        .percent-bar-fill { height: 100%; background: white; transition: width 0.5s ease; }
+        .percent-bar-fill { height: 100%; background: #9146ff; transition: width 0.5s ease; } /* Default fill for #4+ */
         .percent-text { margin-top: 8px; font-size: 20px; font-weight: bold; font-family: monospace; }
         
-        #card1 .percent-bar-fill { background: #eec22e; }
-        #card2 .percent-bar-fill { background: #c0c0c0; }
-        #card3 .percent-bar-fill { background: #cd7f32; }
+        /* Chart */
+        #chart-container { width: 90%; max-width: 800px; margin: 30px auto; height: 150px; }
+        
+        /* Blacklist */
+        .blacklist-area { width: 100%; margin-top: 10px; display: none; }
+        .blacklist-area.show { display: block; }
+
+        #exit-hint { position: fixed; top: 10px; right: 10px; color: rgba(255,255,255,0.3); font-size: 12px; display: none; }
+        body.obs-mode:hover #exit-hint { display: block; }
     </style>
 </head>
-<body>
-    <h1>Live Spam Tracker</h1>
+<body ondblclick="toggleOBSMode()">
     
+    <h1>Live Spam Tracker</h1>
+    <div class="signature" style="font-size: 13px; color: #adadb8; margin-top: -15px; margin-bottom: 25px; font-weight: 600; letter-spacing: 0.5px;">by GodOfGoddess</div>
+    
+    <div class="help-section">
+        <details>
+            <summary>Instructions: How to use with OBS</summary>
+            <div class="help-content">
+                <div class="step">1. Enter a channel name and click <b>Connect</b>.</div>
+                <div class="step">2. Click <b class="highlight">Pop-out</b>. This opens a clean window without browser tabs.</div>
+                <div class="step">3. In the new window, click <b class="highlight">Toggle OBS Mode</b>. The background will turn transparent and controls will hide.</div>
+                <div class="step">4. Add this window to OBS using "Window Capture".</div>
+                <div class="step" style="margin-top:10px; border-top:1px dashed #555; padding-top:10px;">
+                    <b>To Exit OBS Mode:</b> Simply <b class="highlight">Double-Click</b> anywhere on the transparent page.
+                </div>
+            </div>
+        </details>
+    </div>
+
+    <div id="exit-hint">Double-click to Show Controls</div>
+
     <div class="controls">
-        <div>
-            <input id="channel" placeholder="Channel (e.g. xqc)" onkeydown="if(event.key==='Enter') connect()" />
+        <div style="display: flex; justify-content: center; align-items: center; gap: 10px;">
+            <input id="channel" placeholder="Channel (e.g. xqc)" onkeydown="if(event.key==='Enter') connect()" oninput="saveSettings()" />
             <button onclick="connect()">Connect</button>
         </div>
-        <div class="settings-row">
-            <div class="toggle-group">
-                <label class="switch">
-                    <!-- Default Checked: Show Emotes Only -->
-                    <input type="checkbox" id="emoteToggle" checked onchange="updateDisplay()">
-                    <span class="slider"></span>
-                </label>
-                <span class="label-text">Show Emotes Only</span>
+        
+        <div class="settings-container">
+            <div class="settings-row">
+                <div class="toggle-group">
+                    <label class="switch">
+                        <input type="checkbox" id="emoteToggle" checked onchange="saveSettings(); updateDisplay()">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="label-text">Show Emotes Only</span>
+                </div>
+                
+                <div class="toggle-group">
+                    <span class="label-text">Window (s):</span>
+                    <input type="number" id="timerInput" class="small-input" placeholder="Off" value="30" min="1" onchange="saveSettings(); updateTimer()">
+                    <button onclick="manualReset()" style="padding: 4px 10px; font-size: 12px; margin-left: 5px;">Clear</button>
+                </div>
             </div>
-            
-            <div class="toggle-group timer-group">
-                <span class="label-text">Time Window (s):</span>
-                <input type="number" id="timerInput" placeholder="Off" value="30" min="1" onchange="updateTimer()">
-                <button onclick="manualReset()" style="padding: 6px 12px; font-size: 14px;">Clear</button>
+
+            <div class="settings-row">
+                <div class="toggle-group">
+                    <span class="label-text">Max Cards:</span>
+                    <input type="number" id="cardCountInput" class="small-input" value="3" min="1" max="20" onchange="updateCardCount()">
+                </div>
+
+                <div class="toggle-group" title="Count multiple same emotes in one message as just 1">
+                    <label class="switch">
+                        <input type="checkbox" id="uniqueToggle" onchange="saveSettings()">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="label-text">Unique per Msg</span>
+                </div>
+
+                <div class="toggle-group">
+                    <label class="switch">
+                        <input type="checkbox" id="cooldownToggle" onchange="saveSettings()">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="label-text">User CD (s):</span>
+                    <input type="number" id="cooldownInput" class="small-input" value="10" min="1" onchange="saveSettings()">
+                </div>
+            </div>
+
+            <!-- OBS Mode Toggle & Popup (SWAPPED POSITIONS) -->
+            <div class="settings-row">
+                <button onclick="openPopup()" style="background-color: #3a3a3d; font-size: 14px; padding: 8px 16px;">Pop-out</button>
+                <button onclick="toggleOBSMode()" style="background-color: #3a3a3d; font-size: 14px; padding: 8px 16px;">Toggle OBS Mode</button>
+                <button onclick="toggleBlacklist()" style="background-color: #3a3a3d; font-size: 14px; padding: 8px 16px;">Edit Blacklist</button>
+            </div>
+
+            <div id="blacklist-container" class="blacklist-area">
+                <p style="font-size: 12px; margin-bottom: 5px; color: #adadb8;">Add words to ignore (comma separated).</p>
+                <textarea id="blacklistInput" rows="3" style="width: 100%; max-width: 400px; resize: none;" placeholder="badword1, badword2..." oninput="saveSettings(); updateBlacklist()"></textarea>
             </div>
         </div>
     </div>
@@ -102,45 +198,172 @@
         <div id="progress-bg"><div id="progress-bar"></div></div>
     </div>
 
-    <div class="top-container">
-        <!-- Card 1 -->
-        <div id="card1" class="top-card">
-            <div class="rank-badge">#1</div>
-            <div class="content-area" id="content1">-</div>
-            <div style="width:100%">
-                <div class="percent-bar-bg"><div class="percent-bar-fill" id="bar1" style="width:0%"></div></div>
-                <div class="percent-text" id="perc1">0%</div>
-            </div>
-        </div>
-        <!-- Card 2 -->
-        <div id="card2" class="top-card">
-            <div class="rank-badge">#2</div>
-            <div class="content-area" id="content2">-</div>
-            <div style="width:100%">
-                <div class="percent-bar-bg"><div class="percent-bar-fill" id="bar2" style="width:0%"></div></div>
-                <div class="percent-text" id="perc2">0%</div>
-            </div>
-        </div>
-        <!-- Card 3 -->
-        <div id="card3" class="top-card">
-            <div class="rank-badge">#3</div>
-            <div class="content-area" id="content3">-</div>
-            <div style="width:100%">
-                <div class="percent-bar-bg"><div class="percent-bar-fill" id="bar3" style="width:0%"></div></div>
-                <div class="percent-text" id="perc3">0%</div>
-            </div>
-        </div>
+    <!-- Container for dynamic cards -->
+    <div class="top-container" id="cards-container">
+        <!-- Cards injected via JS -->
+    </div>
+
+    <div id="chart-container">
+        <canvas id="spamChart"></canvas>
     </div>
 
     <script>
         let ws = null;
-        let spams = new Map();
-        const TAU = 300000; // 5 min half-life for score weight
+        let spams = new Map(); 
+        let userHistory = new Map(); 
+        
+        const TAU = 300000; 
         const MAX_TIMESTAMPS = 150;
         let emoteMap = new Map();
         let updateInterval = null;
         
-        // REMOVED: let resetInterval = null; 
+        // BLACKLIST
+        const DEFAULT_BLACKLIST = new Set(["the", "be", "to", "of", "and", "a", "in", "that", "have", "i", "it", "for", "not", "on", "with", "he", "as", "you", "do", "at", "this", "but", "his", "by", "from", "they", "we", "say", "her", "she", "or", "an", "will", "my", "one", "all", "would", "there", "their", "what", "so", "up", "out", "if", "about", "who", "get", "which", "go", "me", "is", "are", "was", "were", "has", "had", "can", "could", "should", "would"]);
+        let customBlacklist = new Set();
+
+        // CHART
+        let spamChart = null;
+        let spamEventsPerSecond = 0;
+        let chartData = Array(60).fill(0);
+
+        function saveSettings() {
+            const settings = {
+                channel: document.getElementById('channel').value,
+                emoteOnly: document.getElementById('emoteToggle').checked,
+                timer: document.getElementById('timerInput').value,
+                unique: document.getElementById('uniqueToggle').checked,
+                cooldownToggle: document.getElementById('cooldownToggle').checked,
+                cooldownVal: document.getElementById('cooldownInput').value,
+                blacklist: document.getElementById('blacklistInput').value,
+                cardCount: document.getElementById('cardCountInput').value
+            };
+            localStorage.setItem('spamTrackerSettings', JSON.stringify(settings));
+        }
+
+        function loadSettings() {
+            const saved = localStorage.getItem('spamTrackerSettings');
+            if (saved) {
+                try {
+                    const s = JSON.parse(saved);
+                    if(s.channel) document.getElementById('channel').value = s.channel;
+                    if(s.emoteOnly !== undefined) document.getElementById('emoteToggle').checked = s.emoteOnly;
+                    if(s.timer) document.getElementById('timerInput').value = s.timer;
+                    if(s.unique !== undefined) document.getElementById('uniqueToggle').checked = s.unique;
+                    if(s.cooldownToggle !== undefined) document.getElementById('cooldownToggle').checked = s.cooldownToggle;
+                    if(s.cooldownVal) document.getElementById('cooldownInput').value = s.cooldownVal;
+                    if(s.blacklist) {
+                        document.getElementById('blacklistInput').value = s.blacklist;
+                        updateBlacklist();
+                    }
+                    if(s.cardCount) document.getElementById('cardCountInput').value = s.cardCount;
+                } catch(e) { console.error("Error loading settings", e); }
+            }
+        }
+
+        // Render Dynamic Cards
+        function renderCards(count) {
+            const container = document.getElementById('cards-container');
+            container.innerHTML = '';
+            for (let i = 1; i <= count; i++) {
+                const div = document.createElement('div');
+                div.className = 'top-card';
+                div.id = `card${i}`;
+                div.innerHTML = `
+                    <div class="rank-badge">#${i}</div>
+                    <div class="content-area" id="content${i}">-</div>
+                    <div style="width:100%">
+                        <div class="percent-bar-bg"><div class="percent-bar-fill" id="bar${i}" style="width:0%"></div></div>
+                        <div class="percent-text" id="perc${i}">0%</div>
+                    </div>
+                `;
+                container.appendChild(div);
+            }
+        }
+
+        function updateCardCount() {
+            const count = parseInt(document.getElementById('cardCountInput').value) || 3;
+            renderCards(count);
+            saveSettings();
+            updateDisplay();
+        }
+
+        window.onload = function() {
+            loadSettings();
+            updateCardCount(); // Initial render
+        };
+
+        function initChart() {
+            const ctx = document.getElementById('spamChart').getContext('2d');
+            spamChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array(60).fill(''),
+                    datasets: [{
+                        label: 'Chat Velocity (Events/Sec)',
+                        data: chartData,
+                        borderColor: '#9146ff',
+                        backgroundColor: 'rgba(145, 70, 255, 0.2)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { display: false },
+                        y: { 
+                            display: true, 
+                            grid: { color: '#3a3a3d' },
+                            ticks: { color: '#adadb8' },
+                            beginAtZero: true
+                        }
+                    },
+                    animation: { duration: 0 } 
+                }
+            });
+
+            setInterval(() => {
+                chartData.shift();
+                chartData.push(spamEventsPerSecond);
+                if (spamChart) spamChart.update();
+                spamEventsPerSecond = 0; 
+            }, 1000);
+        }
+
+        function toggleOBSMode() {
+            document.body.classList.toggle('obs-mode');
+        }
+
+        function openPopup() {
+            const width = 600;
+            const height = 900;
+            const left = (screen.width / 2) - (width / 2);
+            const top = (screen.height / 2) - (height / 2);
+            window.open(window.location.href, 'TwitchSpamTracker', 
+                `width=${width},height=${height},top=${top},left=${left},toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes`);
+        }
+
+        function toggleBlacklist() {
+            const el = document.getElementById('blacklist-container');
+            el.classList.toggle('show');
+        }
+
+        function updateBlacklist() {
+            const val = document.getElementById('blacklistInput').value;
+            customBlacklist.clear();
+            val.split(',').forEach(w => {
+                const clean = w.trim().toLowerCase();
+                if (clean) customBlacklist.add(clean);
+            });
+        }
+
+        function isBlacklisted(word) {
+            return DEFAULT_BLACKLIST.has(word) || customBlacklist.has(word);
+        }
 
         function setProgress(pct, msg) {
             document.getElementById('progress-bar').style.width = pct + '%';
@@ -159,34 +382,37 @@
             }
         }
 
-        async function load7TV(channel) {
+        async function loadEmotes(channel) {
             emoteMap.clear();
-            setProgress(15, `Fetching ID for ${channel}...`);
+            setProgress(10, `Resolving User ID...`);
+
             try {
                 const users = await fetchJson(`https://api.ivr.fi/v2/twitch/user?login=${channel}`);
                 if (!users[0]?.id) throw new Error('User not found');
                 const id = users[0].id;
-
-                setProgress(50, `Found ID ${id}. Getting 7TV emotes...`);
-                const tvUser = await fetchJson(`https://7tv.io/v3/users/twitch/${id}`);
-                const setId = tvUser.emote_set?.id;
                 
-                if (setId) {
-                    const setData = await fetchJson(`https://7tv.io/v3/emote-sets/${setId}`);
-                    (setData.emotes || []).forEach(e => {
-                        emoteMap.set(e.name.toLowerCase(), `https://cdn.7tv.app/emote/${e.id}/3x.webp`);
-                    });
-                    setProgress(100, `Connected! ${emoteMap.size} emotes loaded.`);
-                } else {
-                    setProgress(100, `Connected (No 7TV set found)`);
-                }
+                const tasks = [];
+                // 7TV
+                tasks.push(fetchJson(`https://7tv.io/v3/users/twitch/${id}`).then(d => {d.emote_set?.emotes?.forEach(e => emoteMap.set(e.name.toLowerCase(), `https://cdn.7tv.app/emote/${e.id}/3x.webp`));}));
+                tasks.push(fetchJson(`https://7tv.io/v3/emote-sets/global`).then(d => {d.emotes?.forEach(e => emoteMap.set(e.name.toLowerCase(), `https://cdn.7tv.app/emote/${e.id}/3x.webp`));}));
+                // BTTV
+                tasks.push(fetchJson(`https://api.betterttv.net/3/cached/users/twitch/${id}`).then(d => {[...d.channelEmotes||[], ...d.sharedEmotes||[]].forEach(e => emoteMap.set(e.code.toLowerCase(), `https://cdn.betterttv.net/emote/${e.id}/3x`));}));
+                tasks.push(fetchJson(`https://api.betterttv.net/3/cached/emotes/global`).then(d => {d.forEach(e => emoteMap.set(e.code.toLowerCase(), `https://cdn.betterttv.net/emote/${e.id}/3x`));}));
+                // FFZ
+                tasks.push(fetchJson(`https://api.frankerfacez.com/v1/room/id/${id}`).then(d => {Object.values(d.sets||{}).forEach(s => (s.emoticons||[]).forEach(e => emoteMap.set(e.name.toLowerCase(), e.urls['4']||e.urls['1'])));}));
+                tasks.push(fetchJson(`https://api.frankerfacez.com/v1/set/global`).then(d => {Object.values(d.sets||{}).forEach(s => (s.emoticons||[]).forEach(e => emoteMap.set(e.name.toLowerCase(), e.urls['4']||e.urls['1'])));}));
+
+                setProgress(50, `Fetching emote sets...`);
+                await Promise.all(tasks);
+                setProgress(100, `Connected! Listening...`);
             } catch (err) {
                 console.error(err);
-                setProgress(100, `Connected (7TV error: ${err.message})`);
+                setProgress(100, `Connected (Emote fetch error)`);
             }
         }
 
         function addSpam(word) {
+            spamEventsPerSecond++;
             let item = spams.get(word) || { ts: [] };
             const now = Date.now();
             item.ts.push(now);
@@ -198,55 +424,54 @@
             const item = spams.get(word);
             if (!item) return 0;
             const now = Date.now();
-            // Score is weighted by how recent the messages are
             return item.ts.reduce((sum, t) => sum + Math.exp(-(now - t) / TAU), 0);
         }
 
+        function getRecentBurst(word) {
+            const item = spams.get(word);
+            if (!item) return 0;
+            const now = Date.now();
+            return item.ts.filter(t => (now - t) < 5000).length;
+        }
+
+        function isEmoji(str) {
+            const regex = /\p{Extended_Pictographic}/u;
+            return regex.test(str);
+        }
+
         function updateDisplay() {
-            // --- NEW LOGIC START: Time Window Pruning ---
             const timerInput = document.getElementById('timerInput').value;
-            // If timer has a valid value, filter out old data
             if (timerInput && timerInput > 0) {
                 const limitMs = parseInt(timerInput) * 1000;
                 const now = Date.now();
-
                 for (const [key, item] of spams) {
-                    // Keep only timestamps that are newer than (now - limit)
                     const newTs = item.ts.filter(t => (now - t) < limitMs);
-                    
-                    if (newTs.length === 0) {
-                        // If all instances of this word are too old, remove it entirely
-                        spams.delete(key);
-                    } else if (newTs.length < item.ts.length) {
-                        // If we filtered some out, update the array
-                        item.ts = newTs;
-                    }
+                    if (newTs.length === 0) spams.delete(key);
+                    else if (newTs.length < item.ts.length) item.ts = newTs;
                 }
             }
-            // --- NEW LOGIC END ---
 
             const onlyEmotes = document.getElementById('emoteToggle').checked;
+            const maxCards = parseInt(document.getElementById('cardCountInput').value) || 3;
 
             let items = Array.from(spams.keys()).map(k => ({
                 key: k,
                 score: getScore(k),
-                isEmote: emoteMap.has(k)
+                burst: getRecentBurst(k), 
+                isEmote: emoteMap.has(k),
+                isEmoji: isEmoji(k)
             }));
 
-            // Filter noise
             items = items.filter(i => i.score > 0.05);
-            if (onlyEmotes) {
-                items = items.filter(i => i.isEmote);
-            }
-
-            // Sort by score
+            if (onlyEmotes) items = items.filter(i => i.isEmote || i.isEmoji);
             items.sort((a, b) => b.score - a.score);
 
-            // Calc Trend Sum (Top 15 for relative bars)
             const trendSum = items.slice(0, 15).reduce((sum, i) => sum + i.score, 0);
 
-            // Render top 3
-            for (let i = 0; i < 3; i++) {
+            for (let i = 0; i < maxCards; i++) {
+                const cardEl = document.getElementById(`card${i+1}`);
+                if (!cardEl) continue; // Safety check
+
                 const contentEl = document.getElementById(`content${i+1}`);
                 const percTextEl = document.getElementById(`perc${i+1}`);
                 const barEl = document.getElementById(`bar${i+1}`);
@@ -255,12 +480,15 @@
                     contentEl.innerHTML = '<span style="color:#333">-</span>';
                     percTextEl.innerText = '0%';
                     barEl.style.width = '0%';
+                    cardEl.classList.remove('hype-mode');
                     continue;
                 }
 
                 const item = items[i];
-                // Calculate percentage based on total activity
                 const pct = trendSum > 0 ? Math.min(100, Math.round((item.score / trendSum) * 100)) : 0;
+
+                if (item.burst > 10) cardEl.classList.add('hype-mode');
+                else cardEl.classList.remove('hype-mode');
 
                 if (item.isEmote) {
                     contentEl.innerHTML = `<img src="${emoteMap.get(item.key)}" alt="${item.key}">`;
@@ -275,61 +503,105 @@
 
         function manualReset() {
             spams.clear();
+            userHistory.clear();
             updateDisplay();
             const oldText = document.getElementById('status-text').textContent;
             document.getElementById('status-text').textContent = "Board Cleared!";
             setTimeout(() => { document.getElementById('status-text').textContent = oldText; }, 1000);
         }
 
-        function updateTimer() {
-            // Trigger an immediate update so the user sees the effect of changing the timer
-            updateDisplay();
-            const val = document.getElementById('timerInput').value;
-            console.log(`Window updated to ${val}s`);
+        function updateTimer() { updateDisplay(); }
+
+        function checkUserCooldown(username, word) {
+            const cooldownToggle = document.getElementById('cooldownToggle').checked;
+            if (!cooldownToggle) return true;
+            const cooldownSec = parseInt(document.getElementById('cooldownInput').value) || 0;
+            if (cooldownSec <= 0) return true;
+            const now = Date.now();
+            let userMap = userHistory.get(username);
+            if (!userMap) { userMap = new Map(); userHistory.set(username, userMap); }
+            const lastTime = userMap.get(word) || 0;
+            if (now - lastTime < (cooldownSec * 1000)) return false; 
+            userMap.set(word, now);
+            return true;
+        }
+
+        function parseTags(tagStr) {
+            const tags = {};
+            tagStr.split(';').forEach(t => {
+                const parts = t.split('=');
+                if (parts.length >= 2) tags[parts[0]] = parts.slice(1).join('=');
+            });
+            return tags;
         }
 
         function connect() {
             const channel = document.getElementById('channel').value.trim().toLowerCase();
             if (!channel) return alert("Enter channel name");
-
+            saveSettings();
+            if (!spamChart) initChart();
+            updateBlacklist();
             if (ws) { ws.close(); }
             manualReset();
             
-            // NO setInterval here anymore. The updateDisplay loop handles the window.
-
             setProgress(5, "Connecting...");
-
             const nick = `justinfan${Math.floor(Math.random() * 80000) + 1000}`;
             ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
 
             ws.onopen = () => {
+                ws.send('CAP REQ :twitch.tv/tags twitch.tv/commands'); 
                 ws.send('PASS schmoo');
                 ws.send(`NICK ${nick}`);
                 ws.send(`JOIN #${channel}`);
-                load7TV(channel);
+                loadEmotes(channel);
             };
 
             ws.onmessage = (e) => {
                 const lines = e.data.split('\r\n');
                 lines.forEach(line => {
                     if (line.startsWith('PING')) ws.send('PONG :tmi.twitch.tv');
-                    if (line.includes(`PRIVMSG #${channel}`)) {
-                        const msg = line.split(`PRIVMSG #${channel} :`)[1];
-                        if (msg) {
-                            msg.trim().split(/\s+/).forEach(t => {
-                                const clean = t.toLowerCase().replace(/[^a-z0-9]/g, ""); 
-                                if (clean.length > 0) addSpam(clean);
-                                // Also track original casing if needed, but we store keys as lowercase mostly
-                                if (t.length > 0 && t.toLowerCase() !== clean) addSpam(t.toLowerCase());
+                    if (line.includes('PRIVMSG')) {
+                        const parts = line.split('PRIVMSG');
+                        const metaPart = parts[0]; 
+                        const msgPart = parts[1]; 
+                        if (msgPart) {
+                            const tagStart = metaPart.indexOf('@');
+                            let tags = {};
+                            let username = "anon";
+                            if (tagStart !== -1) {
+                                const tagEnd = metaPart.indexOf(' :');
+                                tags = parseTags(metaPart.substring(tagStart + 1, tagEnd));
+                                const userEx = metaPart.match(/:(\w+)!(?:\w+)/);
+                                if (userEx) username = userEx[1];
+                            }
+                            const msgContent = msgPart.split(' :').slice(1).join(' :').trim();
+                            if (tags['emotes']) {
+                                tags['emotes'].split('/').forEach(emo => {
+                                    const [id, positions] = emo.split(':');
+                                    const [start, end] = positions.split(',')[0].split('-').map(Number);
+                                    const code = Array.from(msgContent).slice(start, end + 1).join('').toLowerCase();
+                                    if(code) emoteMap.set(code, `https://static-cdn.jtvnw.net/emoticons/v2/${id}/default/dark/3.0`);
+                                });
+                            }
+                            let tokens = msgContent.trim().split(/\s+/);
+                            if (document.getElementById('uniqueToggle').checked) tokens = [...new Set(tokens)];
+                            tokens.forEach(t => {
+                                if (isEmoji(t)) {
+                                    if (checkUserCooldown(username, t)) addSpam(t);
+                                    return;
+                                }
+                                let clean = t.toLowerCase().replace(/[.,!?"':;]/g, "");
+                                if (isBlacklisted(clean)) return;
+                                if (clean.length > 0 && checkUserCooldown(username, clean)) addSpam(clean);
                             });
                         }
                     }
                 });
             };
-            
             if (!updateInterval) updateInterval = setInterval(updateDisplay, 1000);
         }
+
+        document.getElementById('blacklistInput').addEventListener('change', updateBlacklist);
     </script>
 </body>
 </html>
-
