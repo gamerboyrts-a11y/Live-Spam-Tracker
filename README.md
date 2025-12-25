@@ -1,6 +1,7 @@
-## Rank-Twitch-Chat-Spam
+### Rank-Twitch-Chat-Spam
 
-  The Ultimate Real-Time Chat Meter. Check chats mood with a glance. 
+  ##The Ultimate Real-Time Chat Meter. Check chats mood with a glance. 
+  
   Perfect for when you don't want polls or polls are not fast enough.
 
 A powerful, browser-based dashboard that tracks, ranks, and visualizes the most spammed words and emotes in any Twitch chat in real-time. Designed specifically for streamers and OBS overlays.
