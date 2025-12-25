@@ -6,7 +6,7 @@
 
 A powerful, browser-based dashboard that tracks, ranks, and visualizes the most spammed words and emotes in any Twitch chat in real-time. Designed specifically for streamers and OBS overlays.
 
-[Click here to view live demo](https://gamerboyrts-a11y.github.io/Rank-Twitch-Chat-Spam/)
+[Click here to view live demo](https://gamerboyrts-a11y.github.io/Live-Spam-Tracker/)
 
 
 Twitch Spam Tracker Screenshot**![alt text](https://github.com/gamerboyrts-a11y/Rank-Twitch-Chat-Spam/blob/7297b016660456ce38546b4b2d1887f62206b7d9/Web.png "Website")
