@@ -70,13 +70,15 @@ Twitch Spam Tracker Screenshot**![alt text](https://github.com/gamerboyrts-a11y/
     To Exit OBS Mode: Double-click anywhere on the transparent page.
 
 ⚙️ Customization
-Setting	Description
-Window (s)	How long (in seconds) to count spam before it decays/resets. Default is 30s.
-Max Cards	Number of rank cards to display (Default: 3).
-Show Emotes Only	Hides text words, showing only valid emotes or emojis.
-Unique per Msg	If ON, typing "LUL LUL LUL" counts as +1 score instead of +3.
-User Cooldown	If ON, ignores the same word from the same user for X seconds.
-Edit Blacklist	Add custom words to ignore (e.g., bot commands like !discord).
+
+    Setting	Description
+    Window (s)	How long (in seconds) to count spam before it decays/resets. Default is 30s.
+    Max Cards	Number of rank cards to display (Default: 3).
+    Show Emotes Only	Hides text words, showing only valid emotes or emojis.
+    Unique per Msg	If ON, typing "LUL LUL LUL" counts as +1 score instead of +3.
+    User Cooldown	If ON, ignores the same word from the same user for X seconds.
+    Edit Blacklist	Add custom words to ignore (e.g., bot commands like !discord).
+
 💻 Installation / Hosting
 
 This is a static web application (HTML/JS/CSS). It requires no backend server.
@@ -99,9 +101,6 @@ This is a static web application (HTML/JS/CSS). It requires no backend server.
 
     Emote APIs - 7TV, BTTV, and FFZ public APIs.
 
-📄 License
-
-MIT License - free to modify and use
 ## License
 
 MIT License - feel free to modify and use!
