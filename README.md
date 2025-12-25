@@ -7,6 +7,8 @@ A powerful, browser-based dashboard that tracks, ranks, and visualizes the most 
 
 [Click here to view live demo](https://gamerboyrts-a11y.github.io/Rank-Twitch-Chat-Spam/)
 
+https://gamerboyrts-a11y.github.io/Rank-Twitch-Chat-Spam/
+
 Twitch Spam Tracker Screenshot**![alt text](https://github.com/gamerboyrts-a11y/Rank-Twitch-Chat-Spam/blob/7297b016660456ce38546b4b2d1887f62206b7d9/Web.png "Website")
 ✨ Features
 🎨 Visual & Interactive
